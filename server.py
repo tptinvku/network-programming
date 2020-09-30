@@ -71,6 +71,8 @@ class Communication(Thread):
             try:
                 data = self.conn.recv(4096)
                 message = data.decode('utf-8')
+                if not os.path.isdir('resource'):
+                    os.mkdir('resource')
                 if str(message).startswith('#msg'):
                     if data:
                         self.client_name = str(message).split('#msg_Server: ')
@@ -79,19 +81,22 @@ class Communication(Thread):
                             self.server.display.insert(tk.END, f'{self.conn.getpeername()}: {self.client_name}')
                         print(f'{self.address} says {message}')
                         self.server.broadcast(message, self.address)
-
                 elif message.startswith('#img_file'):
                     if data:
-                        with open(self.img_name % self.image_counter, 'wb') as img:
-                            base_image = base64.b64decode(message.split(':')[1].strip())
-                            img.write(base_image)
-                            self.server.broadcast('Got Image', self.address)
+                        with open('resource/%s' % self.img_name % self.image_counter, 'wb') as img:
+                            str_decode = str(data).split(':')[1].strip()
+                            base = base64.b64decode(str_decode)
+                            img.write(base)
+                            self.server.broadcast(str_decode, self.address)
                             self.image_counter +=1
 
                 elif message.startswith('#txt_file'):
                     if data:
-                        with open(self.txt_name % self.txt_counter, 'wb') as txt:
-                            txt.write(str(data).split(' ')[1].encode('utf-8'))
+                        with open('resource/%s' % self.txt_name % self.txt_counter, 'w') as txt:
+                            lines = str(data).split(':')[1].split('\r')
+                            for line in lines:
+                                print(line)
+                                txt.write(line.strip() + '\n')
                             self.server.broadcast('Got Text', self.address)
                 else:
                     # Client has closed the socket, exit the thread

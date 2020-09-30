@@ -118,14 +118,24 @@ class Client:
                     with open(message, 'rb') as f:
                         l = f.read(4096)
                         while l:
-                            if extension == '.txt':
-                                self.socket.send(f'#txt_file {l}'.encode('utf-8'))
-                                self.socket.sendall(f'#msg_{self.name}: sent {name}{extension}'.encode('utf-8'))
-                                l = f.read(4096)
-                            elif extension == '.jpg':
-                                str = base64.b64encode(f.read(4096))
-                                self.socket.send('#img_file: '.encode('utf-8')+str.strip())
-                                self.socket.sendall(f'#msg_{self.name}: sent {name}{extension}'.encode('utf-8'))
+                            try:
+                                if extension == '.txt':
+                                    str = b'#txt_file: %s' % l
+                                    self.socket.send(str)
+                                    self.socket.sendall(f'#msg_{self.name}: sent {name}{extension}'.encode('utf-8'))
+                                    l = f.read(4096)
+                                elif extension == '.jpg':
+                                    str = b'#img_file: %s' % base64.b64encode(f.read(40960000))
+                                    self.socket.sendall(str)
+                                    self.socket.sendall(f'#msg_{self.name}: sent {name}{extension}'.encode('utf-8'))
+                            except sc.error as e:
+                                print(e)
+                                self.socket.close()
+                                break
+                            except Exception as e:
+                                print(e)
+                                self.socket.close()
+                                break
 
                 else:
                     try:
