@@ -1,50 +1,38 @@
 import os
-import time
-import requests
+import random
 import socket as sc
 from decouple import config
 from threading import Thread
+from datetime import datetime
 
 
-class ExchangeRate(Thread):
+class ExchangeRateFake(Thread):
     def __init__(self, server, address):
-        super(ExchangeRate, self).__init__()
-        self.max_delay = 60
-        self.list_rate = ['USD', 'JPY', 'HKD']
-        self.function = 'CURRENCY_EXCHANGE_RATE'
-        self.api_key = config('KEY')
-        self.from_currency = 'VND'
-        self.to_currency = ''
+        super(ExchangeRateFake, self).__init__()
         self.server = server
         self.address = address
-        self.exchange_rate = ''
-        self.last_refreshed = ''
         self.threads = []
+        self.unit = ['USD', 'JPY', 'HKD']
+        self.from_currency = 'VND'
+        self.to_currency = ''
+        self.now = datetime.now()
+        self.last_refreshed = self.now.strftime("%H:%M:%S - %d/%m/%Y")
 
     def by_unit(self, index):
-        self.to_currency = self.list_rate[index]
-        main_url = f'https://www.alphavantage.co/query?function={self.function}&from_currency={self.from_currency}&to_currency={self.to_currency}&apikey={self.api_key}'
-        response = requests.get(main_url)
-        if response.status_code == 200:
-            try:
-                result = response.json()
-                detail = result['Realtime Currency Exchange Rate']
-                self.exchange_rate = detail['5. Exchange Rate']
-                self.last_refreshed = detail['6. Last Refreshed']
-            except Exception as e:
-                print(e)
-                # self.server.socket.sendto(self.exchange_rate.encode(), self.address)
-
-        time.sleep(self.max_delay)
+        usd = random.random()
+        jpy = random.random()
+        hkd = random.random()
+        exchange_rate = (usd, jpy, hkd)
+        self.to_currency = self.unit[index]
+        message = f'{self.from_currency}|{self.to_currency}|{exchange_rate[index]}|{self.last_refreshed}'.encode()
+        self.server.socket.sendto(message, self.address)
 
     def run(self):
         while True:
-            for i in range(len(self.list_rate)):
-                thread = Thread(target=self.by_unit, args=(i,))
+            for index in range(len(self.unit)):
+                thread = Thread(target=self.by_unit, args=(index, ))
                 self.threads.append(thread)
                 thread.start()
-            for thread in self.threads:
-                thread.join()
 
 
 class Server:
@@ -61,11 +49,11 @@ class Server:
         while True:
             try:
                 data, address = self.socket.recvfrom(4096)
-                message = data.decode()
-                if message:
+                if data:
+                    exchange_rate_fake = ExchangeRateFake(self, address)
+                    exchange_rate_fake.start()
+                    message = data.decode()
                     print(message)
-                    exchange_rate = ExchangeRate(self, address)
-                    exchange_rate.start()
                 else:
                     self.socket.close()
                     os._exit(0)
