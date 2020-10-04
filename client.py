@@ -18,11 +18,12 @@ class Client(Thread):
         self.socket = sc.socket(family=sc.AF_INET, type=sc.SOCK_DGRAM)
         self.listBox = None
         self.threads = []
+        self.rows = []
 
     def run(self):
         send = Thread(target=self.send)
         send.start()
-        for count in range(3):
+        for count in range(7):
             receive = Thread(target=self.receive, args=(count, ))
             self.threads.append(receive)
             receive.start()
@@ -56,16 +57,23 @@ class Client(Thread):
             data, server = self.socket.recvfrom(4096)
             if data:
                 message = data.decode()
-                columns = message.split('|')
-                print(columns, '\n')
+                row = message.split('|')
+                # print(columns, '\n')
                 ls_child = self.listBox.get_children()
                 index = len(ls_child)
-                if index < 3:
-                    self.listBox.insert("", tk.END, values=columns)
+                if index < 7:
+                    self.rows.append(row)
+                    rows = self.sort(self.rows)
+                    self.listBox.insert("", tk.END, values=rows[count])
                 else:
-                    self.listBox.item(ls_child[count], values=columns)
-
+                    self.rows[count] = row
+                    rows = self.sort(self.rows)
+                    self.listBox.item(ls_child[count], values=rows[count])
                 time.sleep(self.max_delay)
+
+    def sort(self, rows):
+        rows.sort(key=lambda x: x[0])
+        return rows
 
 
 class GUI:
@@ -74,18 +82,31 @@ class GUI:
         stop = Thread(target=self.client.stop)
         stop.start()
 
+    def send_option(self, variable):
+        option = variable.get().encode()
+        self.client.socket.sendto(option, self.client.address)
+
     def main(self):
         window = tk.Tk()
         window.title('Client')
         window.resizable(width=0, height=0)
 
-        columns = ('From', 'To', 'Exchange Rate', 'Time')
+        columns = ('id', 'From', 'To', 'Exchange Rate', 'Time')
         list_box = ttk.Treeview(master=window, columns=columns, show='headings')
         for col in columns:
             list_box.heading(col, text=col)
-        list_box.grid(row=0, column=0, columnspan=4, sticky='nsew')
+        list_box.grid(row=0, column=0, columnspan=5, sticky='nsew')
         self.client.listBox = list_box
+
+        options = ['USD', 'JPY', 'HKD']
+        var = tk.StringVar(window)
+        var.set(options[0]) # default value
+        var.trace_add('write', lambda *args: self.send_option(var))
+        select = tk.OptionMenu(window, var, *options)
+        select.grid(row=1, column=2, sticky='nsew')
+
         self.client.start()
+
         window.mainloop()
 
 
