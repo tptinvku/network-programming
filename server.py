@@ -1,4 +1,5 @@
 import os
+import time
 import random
 import socket as sc
 from decouple import config
@@ -12,22 +13,27 @@ class ExchangeRateFake(Thread):
         self.server = server
         self.address = address
         self.threads = []
+        self.olds = []
         self.markets = ['USD', 'JPY', 'HKD']
         self.units = ['USD', 'JPY', 'HKD', 'VND', 'LAK', 'SGD', 'BRD']
         self.from_currency = ''
         self.message = ''
 
-    def by_unit(self, index, to_currency, exchange_rate):
-        if not to_currency == self.from_currency:
+    def by_unit(self, from_currency, to_currency, exchange_rate):
+        if not to_currency == from_currency:
             now = datetime.now()
-            last_refreshed = now.strftime("%H:%M:%S - %d/%m/%Y")
-            self.message = f'{index}|{self.from_currency}|{to_currency}|{exchange_rate}|{last_refreshed}'.encode()
-            self.server.socket.sendto(self.message, self.address)
-            self.message = ''
+            if to_currency not in self.olds:
+                self.olds.append(to_currency)
+                last_refreshed = now.strftime("%H:%M:%S - %d/%m/%Y")
+                self.message = f'{from_currency}|{to_currency}|{exchange_rate}|{last_refreshed}'.encode()
+                self.server.socket.sendto(self.message, self.address)
+                if len(self.olds) < (len(self.units) - 1):
+                    self.olds.clear()
 
     def run(self):
         while True:
             to_currency = self.units
+            from_currency = self.from_currency
             usd = random.random()
             jpy = random.random()
             hkd = random.random()
@@ -43,7 +49,8 @@ class ExchangeRateFake(Thread):
                     list_rate.pop(index)
                     break
             for index in range(len(to_currency)):
-                thread = Thread(target=self.by_unit, args=(index, to_currency[index], list_rate[index]), daemon=True)
+                thread = Thread(target=self.by_unit, args=(from_currency, to_currency[index], list_rate[index]),
+                                daemon=True)
                 self.threads.append(thread)
                 thread.start()
 
@@ -68,9 +75,7 @@ class Server:
                 message = data.decode()
                 exchange_rate_fake = ExchangeRateFake(self, address)
                 if data:
-                    # print(message)
                     if message in exchange_rate_fake.markets:
-                        print(message)
                         exchange_rate_fake.from_currency = message
                         exchange_rate_fake.start()
 

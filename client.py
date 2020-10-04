@@ -23,7 +23,7 @@ class Client(Thread):
     def run(self):
         send = Thread(target=self.send)
         send.start()
-        for count in range(7):
+        for count in range(6):
             receive = Thread(target=self.receive, args=(count, ))
             self.threads.append(receive)
             receive.start()
@@ -58,22 +58,16 @@ class Client(Thread):
             if data:
                 message = data.decode()
                 row = message.split('|')
-                # print(columns, '\n')
+                print(row)
                 ls_child = self.listBox.get_children()
                 index = len(ls_child)
-                if index < 7:
+                if index < 6:
                     self.rows.append(row)
-                    rows = self.sort(self.rows)
-                    self.listBox.insert("", tk.END, values=rows[count])
+                    self.listBox.insert("", tk.END, values=self.rows[count])
                 else:
                     self.rows[count] = row
-                    rows = self.sort(self.rows)
-                    self.listBox.item(ls_child[count], values=rows[count])
+                    self.listBox.item(ls_child[count], values=self.rows[count])
                 time.sleep(self.max_delay)
-
-    def sort(self, rows):
-        rows.sort(key=lambda x: x[0])
-        return rows
 
 
 class GUI:
@@ -90,8 +84,7 @@ class GUI:
         window = tk.Tk()
         window.title('Client')
         window.resizable(width=0, height=0)
-
-        columns = ('id', 'From', 'To', 'Exchange Rate', 'Time')
+        columns = ('From', 'To', 'Exchange Rate', 'Time')
         list_box = ttk.Treeview(master=window, columns=columns, show='headings')
         for col in columns:
             list_box.heading(col, text=col)
