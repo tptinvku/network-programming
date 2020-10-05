@@ -14,7 +14,6 @@ class ExchangeRateFake(Thread):
         self.address = address
         self.threads = []
         self.olds = []
-        self.markets = ['USD', 'JPY', 'HKD']
         self.units = ['USD', 'JPY', 'HKD', 'VND', 'LAK', 'SGD', 'BRD']
         self.from_currency = ''
         self.message = ''
@@ -26,6 +25,7 @@ class ExchangeRateFake(Thread):
                 self.olds.append(to_currency)
                 last_refreshed = now.strftime("%H:%M:%S - %d/%m/%Y")
                 self.message = f'{from_currency}|{to_currency}|{exchange_rate}|{last_refreshed}'.encode()
+                print(self.message)
                 self.server.socket.sendto(self.message, self.address)
                 if len(self.olds) < (len(self.units) - 1):
                     self.olds.clear()
@@ -33,7 +33,6 @@ class ExchangeRateFake(Thread):
     def run(self):
         while True:
             to_currency = self.units
-            from_currency = self.from_currency
             usd = random.random()
             jpy = random.random()
             hkd = random.random()
@@ -49,6 +48,7 @@ class ExchangeRateFake(Thread):
                     list_rate.pop(index)
                     break
             for index in range(len(to_currency)):
+                from_currency = self.from_currency
                 thread = Thread(target=self.by_unit, args=(from_currency, to_currency[index], list_rate[index]),
                                 daemon=True)
                 self.threads.append(thread)
@@ -60,6 +60,7 @@ class ExchangeRateFake(Thread):
 
 class Server:
     def __init__(self):
+        self.markets = ['USD', 'JPY', 'HKD']
         self.ip = config('IP')
         self.port = int(config('PORT'))
         self.address = (self.ip, self.port)
@@ -75,7 +76,7 @@ class Server:
                 message = data.decode()
                 exchange_rate_fake = ExchangeRateFake(self, address)
                 if data:
-                    if message in exchange_rate_fake.markets:
+                    if message in self.markets:
                         exchange_rate_fake.from_currency = message
                         exchange_rate_fake.start()
 

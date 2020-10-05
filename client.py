@@ -58,7 +58,6 @@ class Client(Thread):
             if data:
                 message = data.decode()
                 row = message.split('|')
-                print(row)
                 ls_child = self.listBox.get_children()
                 index = len(ls_child)
                 if index < 6:
@@ -77,6 +76,7 @@ class GUI:
         stop.start()
 
     def send_option(self, variable):
+        option = ''
         option = variable.get().encode()
         self.client.socket.sendto(option, self.client.address)
 
