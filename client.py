@@ -16,12 +16,17 @@ public_key, private_key = rsa.newkeys(512)
 save_pk = public_key.save_pkcs1(format="DER")
 socket.sendall(save_pk)
 time.sleep(2)
+
+server_save_pk = socket.recv(1024)
+PublicKey = rsa.key.PublicKey.load_pkcs1(server_save_pk, format="DER")
+print(f"Server: {PublicKey}")
 while 1:
     message = input(f"{client_name}: ")
     if message in list(("q", "quit", "exit", "close", "cancel")):
         sys.exit(0)
     else:
-        socket.sendall(f"{client_name}: {message}".encode())
+        encrypted_message = rsa.encrypt(f"{client_name}: {message}".encode(), PublicKey)
+        socket.sendall(encrypted_message)
         data = socket.recv(1024)
         if data:
             print(rsa.decrypt(data, private_key).decode())
