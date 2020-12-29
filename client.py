@@ -1,9 +1,9 @@
 import os
+import socket as sc
 import sys
 import tkinter as tk
-import socket as sc
-from decouple import config
 from threading import Thread
+from decouple import config
 
 
 class Client:

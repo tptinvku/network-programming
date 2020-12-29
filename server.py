@@ -1,8 +1,9 @@
 import os
-import sys
 import socket as sc
-from decouple import config
+import sys
 from threading import Thread
+
+from decouple import config
 
 
 class Server:
@@ -39,7 +40,8 @@ class Communication(Thread):
             print(data.decode())
             if data:
                 self.socket.sendto(
-                    f'Server: received "{data.decode().split(":")[1].strip()}" from {data.decode().split(":")[0].strip()}'.encode(),
+                    f'Server: received "{data.decode().split(":")[1].strip()}" from {data.decode().split(":")[0].strip()}'.encode(
+                    ),
                     address)
 
 
