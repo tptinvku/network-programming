@@ -37,7 +37,7 @@ class Controller:
     def openFileDialog(self):
         window = QFileDialog.getOpenFileName(
             caption="Choose Files",
-            filter="Text file (*.txt) ;;Image file (*.png, *.jpg)"
+            filter="Text file (*.txt) Image file ( *.png && *.jpg)  "
         )
         self.ui.txt_msg.setText(window[0])
 
@@ -52,7 +52,7 @@ class Controller:
                 self.conn_state = True
                 if (self.host, self.port) not in self.friends:
                     try:
-                        self.ui.btn_connect.setText(_translate("Form", "Disconnect"))
+                        self.ui.btn_connect.setText(_translate("Form", "Unfriend"))
                         self.friends.append((self.host, int(self.port)))
                         for friend in self.friends:
                             self.ui.txt_friends.append(f"{friend}\n")
@@ -61,7 +61,7 @@ class Controller:
                         self.socket = sc.socket(sc.AF_INET, sc.SOCK_DGRAM)
             else:
                 self.conn_state = False
-                self.ui.btn_connect.setText(_translate("Form", "Connect"))
+                self.ui.btn_connect.setText(_translate("Form", "Add Friend"))
                 self.friends.remove(self.address)
                 self.ui.txt_friends.clear()
                 for friend in self.friends:
@@ -95,12 +95,12 @@ class Send(Thread):
     def file_type(self, filename, codecheck):
         with open(filename, 'rb') as file:
             if codecheck != 'file_txt':
-                file_data = codecheck.encode('utf-8') + base64.b64encode(file.read(1024 * 25))
+                file_data = codecheck.encode('utf-8') + base64.b64encode(file.read(1024 * 25 * 25))
             else:
-                file_send = codecheck.encode('utf-8') + file.read(1024 * 25)
+                file_send = codecheck.encode('utf-8') + file.read(1024 * 25 * 25)
                 file_data = file_send
             self.socket.sendto(file_data, self.address)
-            self.ui.txt_msg.append(f"{self.address}: 'Send file done'\n")
+            self.ui.txt_chat.append('Send file done')
             self.ui.txt_msg.setText("")
 
     def run(self):
@@ -117,7 +117,7 @@ class Send(Thread):
                     # send message
                     mgs = 'mgs' + message
                     self.socket.sendto(f"{self.address}: {mgs}".encode('utf-8'), self.address)
-                self.ui.txt_chat.append(f"{self.address}: {message}\n")
+                    self.ui.txt_chat.append(f"{self.address}: {message}\n")
                 self.ui.txt_msg.setText("")
         except Exception as e:
             print(e)
@@ -128,7 +128,7 @@ class Receive(Thread):
         super(Receive, self).__init__()
         self.ui = ui
         self.socket = socket
-        self.buffer_size = 1024 * 25
+        self.buffer_size = 1024 * 25 * 25
 
     def save_file(self, type, data):
         filename = datetime.datetime.now().strftime('%d_%m_%Y_%H_%M_%S') + type
@@ -140,22 +140,22 @@ class Receive(Thread):
             file = open(filename, 'w')
             file.write(data[8:])
         file.close()
-        print('Done')
-
+        self.ui.txt_chat.append('Save file done')
     def run(self):
         while 1:
             try:
                 mess, addr = self.socket.recvfrom(self.buffer_size)
                 data = mess.decode('utf_8')
                 check = data[:8]
+                print(check)
                 if check == 'file_txt':
                     self.save_file('.txt', data)
                 elif check == 'file_png':
                     self.save_file('.png', data)
                 elif check == 'file_jpg':
                     self.save_file('.jpg', data)
-                elif data[22:25] == 'mgs':
-                    new_mgs = data[:21] + " " + data[25:]
+                elif data[21:24] == 'mgs':
+                    new_mgs = data[:21] + " " + data[24:]
                     self.ui.txt_chat.append(new_mgs)
             except Exception as e:
                 print(e)
@@ -172,11 +172,11 @@ class Server(QThread):
         self.ui.txt_address.setText(f"{self.host}:{self.port}")
         self.address = (self.host, self.port)
         self.socket = sc.socket(sc.AF_INET, sc.SOCK_DGRAM)
-        self.buffer_size = 1024 * 25
+        self.buffer_size = 1024 * 25 * 25
 
     def run(self):
         self.socket.bind(self.address)
-        response = ServerResponse(self,self.ui)
+        response = ServerResponse(self, self.ui)
         response.start()
 
 
@@ -185,7 +185,7 @@ class ServerResponse(Thread):
         super(ServerResponse, self).__init__()
         self.server = server
         self.ui = ui
-        self.buffer_size = 1024 * 25
+        self.buffer_size = 1024 * 25 * 25
 
     def save_file(self, type, data):
         filename = datetime.datetime.now().strftime('%d_%m_%Y_%H_%M_%S') + type
@@ -203,9 +203,9 @@ class ServerResponse(Thread):
         try:
             file = open(filename, 'rb')
             if codecheck != 'file_txt':
-                file_data = codecheck.encode('utf-8') + base64.b64encode(file.read(1024 * 25))
+                file_data = codecheck.encode('utf-8') + base64.b64encode(file.read(1024 * 25 * 25))
             else:
-                file_send = codecheck.encode('utf-8') + file.read(1024 * 25)
+                file_send = codecheck.encode('utf-8') + file.read(1024 * 25 * 25)
                 file_data = file_send
             self.server.socket.sendto(file_data, self.server.address)
             self.ui.txt_chat.append('Send file done')
@@ -218,14 +218,15 @@ class ServerResponse(Thread):
                 mess, addr = self.server.socket.recvfrom(self.buffer_size)
                 data = mess.decode('utf_8')
                 check = data[:8]
+                print(check)
                 if check == 'file_txt':
                     self.save_file('.txt', data)
                 elif check == 'file_png':
                     self.save_file('.png', data)
                 elif check == 'file_jpg':
                     self.save_file('.jpg', data)
-                elif data[22:25] == 'mgs':
-                    new_mgs = data[:21] + " " + data[25:]
+                elif data[21:24] == 'mgs':
+                    new_mgs = data[:21] + " " + data[24:]
                     self.ui.txt_chat.append(new_mgs)
                 if self.ui.txt_msg.text():
                     message = self.ui.txt_msg.text()
@@ -239,9 +240,10 @@ class ServerResponse(Thread):
                         # send message
                         mgs = 'mgs' + message
                         self.server.socket.sendto(f"{addr}: {mgs}".encode('utf-8'), addr)
+
                     self.ui.txt_msg.setText("")
             except Exception as e:
-                # print(e)
+                print(e)
                 break
 
 
